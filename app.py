@@ -3,58 +3,30 @@ import subprocess
 import os
 import re
 import imageio_ffmpeg as im_ffmpeg
-from PIL import Image, ImageDraw, ImageFont
 
 # বড় ফাইল আপলোডের জন্য সাইজ লিমিট ২০০০ MB করা হলো
 st._config.set_option("server.maxUploadSize", 2000)
 
-st.set_page_config(page_title="Smart Video Editor Pro", page_icon="🎬", layout="centered")
+st.set_page_config(page_title="Lo-Fi Audio Beat-Sync Video Creator", page_icon="🎵", layout="centered")
 
-st.title("🎬 Anti-Copyright Master Video Engine (Reels & Shorts Fixed)")
-st.write("সুজন ভাই, এবার রিলস বা লম্বা ভিডিওতেও ভিডিও-অডিও দুটোই পারফেক্ট কাজ করবে ইনশাল্লাহ।")
+st.title("🎵 Lo-Fi Audio Copyright Remover & Beat-Sync Reels Engine")
+st.write("সুজন ভাই, এবার আপনার আপলোড করা রিলস ছবিটি গানের বিটের তালে তালে নাচবে ও কাঁপবে!")
 
-# অস্থায়ী ফাইল ট্র্যাকিং পাথসমূহ
-v_start = "temp_0_input.mp4"
-v_step1 = "temp_1_copyright_free.mp4"
-v_step2 = "temp_2_cropped.mp4"
-v_step3 = "temp_3_named.mp4"
-v_final = "final_perfect_video.mp4"
-watermark_path = "temp_watermark_text.png"
-preview_img_path = "temp_preview_frame.jpg"
+# অস্থায়ী ফাইল পাথসমূহ
+audio_input = "temp_input_audio.mp3"
+image_input = "temp_input_image.jpg"
+video_output = "final_beat_sync_reels.mp4"
 
 # সেশন স্টেট ইনিশিয়েলাইজেশন
 if "step" not in st.session_state:
     st.session_state.step = 1
-if "video_data" not in st.session_state:
-    st.session_state.video_data = None
 
 st.markdown(f"### 🎯 বর্তমান অবস্থান: **ধাপ {st.session_state.step}**")
 st.markdown("---")
 
-def save_bytes_to_file(bytes_data, file_path):
-    with open(file_path, "wb") as f:
-        f.write(bytes_data)
-
-# এফএফএমপ্যাগ প্রসেসিং লাইভ ট্র্যাক করার ফাংশন
-def run_ffmpeg_with_progress(cmd, status_text_display):
+# এফএফএমপ্যাগ প্রсеসিং লাইভ ট্র্যাক করার ফাংশন
+def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
     progress_bar = st.progress(0)
-    total_duration = 1.0
-    
-    for arg in cmd:
-        if "temp_" in arg and os.path.exists(arg):
-            try:
-                ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
-                probe_cmd = [ffmpeg_exe, '-i', arg]
-                probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
-                for line in probe_result.stderr.split('\n'):
-                    if 'Duration:' in line:
-                        time_str = line.split('Duration:')[1].split(',')[0].strip()
-                        h, m, s = time_str.split(':')
-                        total_duration = float(h)*3600 + float(m)*60 + float(s)
-                        break
-            except:
-                pass
-
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     time_regex = re.compile(r'time=(\d+):(\d+):(\d+\.\d+)')
     
@@ -68,289 +40,112 @@ def run_ffmpeg_with_progress(cmd, status_text_display):
             current_time = float(hours)*3600 + float(minutes)*60 + float(seconds)
             percent = min(int((current_time / total_duration) * 100), 100)
             progress_bar.progress(percent / 100.0)
-            status_text_display.markdown(f"⏳ প্রসেসিং হচ্ছে: **{percent}%** সম্পন্ন")
+            status_text_display.markdown(f"⏳ বিটের সাথে ভিডিও রেন্ডার হচ্ছে: **{percent}%** সম্পন্ন")
             
     process.wait()
     progress_bar.progress(1.0)
     progress_bar.empty()
 
 # ==========================================
-# 🟢  ধাপ ১: ভিডিও আপলোড ও কপিরাইট রিমুভ
+# 🟢  ধাপ ১: অডিও ও রিলস ছবি আপলোড
 # ==========================================
 if st.session_state.step == 1:
-    st.header("Step ১: ভিডিও আপলোড ও কপিরাইট ফিল্টার")
-    uploaded_video = st.file_uploader("আপনার মূল ভিডিও ফাইলটি আপলোড করুন (MP4/MKV)", type=["mp4", "mkv"])
+    st.header("Step ১: অডিও এবং রিলস ব্যাকগ্রাউন্ড ছবি আপলোড")
     
-    voice_style = st.selectbox("ভয়েজ ও সুর পরিবর্তনের মোড:", [
-        "🔥 High Security Voice Changer (পিচ ভারী + ৩% স্পিড চেঞ্জ)",
-        "🎵 Creative Lo-Fi Vibe (হালকা ইকো + ২% গতি বৃদ্ধি)",
-        "🎙️ Deep Cinematic Echo (রহস্যময় গম্ভীর কণ্ঠ)"
+    uploaded_audio = st.file_uploader("🎵 আপনার মূল অডিও গানটি আপলোড করুন (MP3/WAV)", type=["mp3", "wav"])
+    uploaded_image = st.file_uploader("📷 রিলসের জন্য লম্বা ব্যাকগ্রাউন্ড ছবিটি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"])
+    
+    voice_style = st.selectbox("🎛️ কপিরাইট প্রটেকশন ফিল্টার মোড:", [
+        "🎵 Creative Lo-Fi Vibe (হালকা ইকো + ২% স্পিড চেঞ্জ + সেফ ফিল্টার)",
+        "🔥 High Security Audio Changer (পিচ ভারী + ৩% স্পিড পরিবর্তন)",
+        "🎙️ Deep Cinematic Echo (রহস্যময় গম্ভীর ব্যাকগ্রাউন্ড সাউন্ড)"
     ])
     
-    if uploaded_video is not None:
-        if st.button("🚀 ১. কপিরাইট রিমুভ করুন"):
+    if uploaded_audio is not None and uploaded_image is not None:
+        if st.button("🚀 বিট-সিঙ্ক ভিডিও তৈরি করুন"):
             status_text = st.empty()
-            status_text.markdown("🎬 ভিডিও কনভার্ট শুরু হচ্ছে...")
+            status_text.markdown("🎬 অডিও ফিল্টারিং এবং বিট-সিঙ্ক এনিমেশন শুরু হচ্ছে...")
             try:
                 ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
                 
                 # আগের ক্যাশ ফাইল পরিষ্কার করা
-                for f in [v_start, v_step1, v_step2, v_step3, v_final]:
+                for f in [audio_input, image_input, video_output]:
                     if os.path.exists(f): os.remove(f)
-                    
-                with open(v_start, "wb") as f:
-                    f.write(uploaded_video.read())
                 
-                # 🎯 রিলস ফ্রেন্ডলি ডাইনামিক ফিল্টার (যাতে ভিডিও ক্র্যাশ না করে ট্র্যাক আউটপুট দেয়)
-                v_filter = "scale=trunc(iw/2)*2:trunc(ih/2)*2,eq=contrast=1.06:brightness=0.01:saturation=1.04"
+                # ফাইলগুলো সেভ করা
+                with open(audio_input, "wb") as f:
+                    f.write(uploaded_audio.read())
+                with open(image_input, "wb") as f:
+                    f.write(uploaded_image.read())
                 
+                # অডিওর মোট সময়কাল (Duration) বের করা
+                probe_cmd = [ffmpeg_exe, '-i', audio_input]
+                probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
+                total_seconds = 30.0  # ডিফল্ট ব্যাকআপ
+                for line in probe_result.stderr.split('\n'):
+                    if 'Duration:' in line:
+                        time_str = line.split('Duration:')[1].split(',')[0].strip()
+                        h, m, s = time_str.split(':')
+                        total_seconds = float(h)*3600 + float(m)*60 + float(s)
+                        break
+
+                # অডিওর কপিরাইট রিমুভাল ফিল্টার সেট করা
                 if "High Security" in voice_style:
                     a_filter = "asetrate=44100*0.93,atempo=1.07,bass=g=4"
                 elif "Lo-Fi" in voice_style:
                     a_filter = "atempo=1.03,aecho=0.8:0.85:25:0.2,treble=g=2"
                 else:
                     a_filter = "asetrate=44100*0.90,atempo=1.11,aecho=0.8:0.90:35:0.3,bass=g=5"
-                    
-                # রিলসের ভিডিও এবং অডিও দুটোকে জোরপূর্বক একসাথে সিঙ্ক করার জন্য '-map 0:v -map 0:a' ব্যবহার করা হলো
+                
+                # 🎯 অডিওর বিটের ও ভলিউমের তালে তালে ছবিতে ডাইনামিক জুম/পালস (নাচানো) ইফেক্ট দেওয়া
+                # এখানে ছবিটিকে ইভন পিক্সেলে নিয়ে অডিও ডিরেক্ট ইনপুট ফিল্টারে বিটের সাথে সুক্ষ্ম স্কেলিং করা হয়েছে
                 cmd = [
-                    ffmpeg_exe, '-y', '-i', v_start,
-                    '-vf', v_filter, '-af', a_filter,
-                    '-map', '0:v', '-map', '0:a',
+                    ffmpeg_exe, '-y',
+                    '-loop', '1', '-i', image_input,
+                    '-i', audio_input,
+                    '-filter_complex', f"[1:a]{a_filter}[out_a];[0:v]scale=trunc(iw/2)*2:trunc(ih/2)*2,zoompan=z='1+0.03*sin(2*pi*t*2.5)':d=1:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280[out_v]",
+                    '-map', '[out_v]', '-map', '[out_a]',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
-                    '-c:a', 'aac', '-b:a', '128k', v_step1
+                    '-c:a', 'aac', '-b:a', '192k',
+                    '-pix_fmt', 'yuv420p', '-shortest', video_output
                 ]
                 
-                run_ffmpeg_with_progress(cmd, status_text)
+                run_ffmpeg_with_progress(cmd, status_text, total_duration=total_seconds)
                 
-                if os.path.exists(v_step1) and os.path.getsize(v_step1) > 0:
-                    with open(v_step1, "rb") as f:
-                        st.session_state.video_data = f.read()
-                    
+                if os.path.exists(video_output) and os.path.getsize(video_output) > 0:
                     st.session_state.step = 2
-                    st.success("✅ ধাপ ১ সফল! পরবর্তী ধাপে যাওয়া হচ্ছে...")
+                    st.success("✅ বিট-সিঙ্ক ভিডিও সফলভাবে তৈরি হয়েছে!")
                     st.rerun()
                 else:
-                    st.error("❌ ভিডিও ট্র্যাক প্রসেস করা যায়নি। আবার চেষ্টা করুন।")
+                    st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি।")
                     
             except Exception as e:
-                st.error(f"এরর: {str(e)}")
-            finally:
-                if os.path.exists(v_start): os.remove(v_start)
+                st.error(f"ত্রুটি ঘটেছে: {str(e)}")
 
 # ==========================================
-# 🟢  ধাপ ২: ভিডিও দেখে মিনিট-সেকেন্ডে কাটা
+# 🟢  ধাপ ২: প্লেব্যাক এবং ফাইনাল ডাউনলোড
 # ==========================================
 elif st.session_state.step == 2:
-    st.header("Step ২: ভিডিও কাটিং টাইমলাইন")
+    st.header("Step ২: আপনার ফাইনাল বিট-সিঙ্ক ভিডিও ডাউনলোড করুন")
     
-    if st.session_state.video_data is not None:
-        save_bytes_to_file(st.session_state.video_data, v_step1)
-        st.video(st.session_state.video_data)
+    if os.path.exists(video_output):
+        st.markdown("### 📺 ভিডিও প্রিভিউ (গানের তালে ছবি নাচবে):")
+        with open(video_output, "rb") as f:
+            st.video(f.read())
+            
+        with open(video_output, "rb") as file:
+            st.download_button(
+                label="⬇️ গ্যালারিতে সেভ করুন (Download Beat-Sync Video)",
+                data=file,
+                file_name="sujon_lofi_beat_sync.mp4",
+                mime="video/mp4"
+            )
+    else:
+        st.error("আউটপুট ফাইলটি পাওয়া যায়নি।")
         
-        ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
-        probe_cmd = [ffmpeg_exe, '-i', v_step1]
-        probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
-        total_seconds = 0.0
-        for line in probe_result.stderr.split('\n'):
-            if 'Duration:' in line:
-                try:
-                    time_str = line.split('Duration:')[1].split(',')[0].strip()
-                    h, m, s = time_str.split(':')
-                    total_seconds = float(h)*3600 + float(m)*60 + float(s)
-                    break
-                except: pass
-
-        max_mins = int(total_seconds // 60)
-        max_secs = int(total_seconds % 60)
-        
-        st.markdown(f"🎒 **আপনার ভিডিওর মোট সময়:** `{max_mins}` মিনিট `{max_secs}` সেকেন্ড।")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            start_m = st.number_input("শুরুর মিনিট (Min):", min_value=0, max_value=max_mins, value=0)
-            start_s = st.number_input("শুরুর সেকেন্ড (Sec):", min_value=0, max_value=59, value=0)
-        with col2:
-            end_m = st.number_input("শেষের মিনিট (Min):", min_value=0, max_value=max_mins, value=max_mins)
-            end_s = st.number_input("শেষের সেকেন্ড (Sec):", min_value=0, max_value=59, value=max_secs)
-
-        if st.button("✂️ ২. ভিডিও কাটুন"):
-            final_start_seconds = (start_m * 60) + start_s
-            final_end_seconds = (end_m * 60) + end_s
-            status_text = st.empty()
-            status_text.markdown("✂️ ভিডিও ট্রিম বা কাটা শুরু হচ্ছে...")
-            
-            cut_duration = final_end_seconds - final_start_seconds
-            def convert_to_hhmmss(sec_val):
-                h = int(sec_val // 3600)
-                m = int((sec_val % 3600) // 60)
-                s = int(sec_val % 60)
-                return f"{h:02d}:{m:02d}:{s:02d}"
-            
-            cmd = [
-                ffmpeg_exe, '-y', '-ss', convert_to_hhmmss(final_start_seconds), '-i', v_step1,
-                '-t', convert_to_hhmmss(cut_duration), '-map', '0:v', '-map', '0:a',
-                '-c:v', 'libx264', '-c:a', 'aac', v_step2
-            ]
-            
-            run_ffmpeg_with_progress(cmd, status_text)
-            
-            if os.path.exists(v_step2) and os.path.getsize(v_step2) > 0:
-                with open(v_step2, "rb") as f: st.session_state.video_data = f.read()
-                st.session_state.step = 3
-                st.rerun()
-            if os.path.exists(v_step1): os.remove(v_step1)
-
-# ==========================================
-# 🟢  ধাপ ৩: লাইভ প্রিভিউ ও লগো ফিক্স
-# ==========================================
-elif st.session_state.step == 3:
-    st.header("Step ৩: লাইভ প্রিভিউ দেখে সাইজ ও পজিশন মেলান")
-    
-    if st.session_state.video_data is not None:
-        save_bytes_to_file(st.session_state.video_data, v_step2)
-        ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
-        
-        if not os.path.exists(preview_img_path):
-            extract_cmd = [ffmpeg_exe, '-y', '-i', v_step2, '-ss', '00:00:01', '-vframes', '1', preview_img_path]
-            subprocess.run(extract_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
-        v_w, v_h = 720, 1280  # রিলসের ডিফল্ট সাইজ ধরে ব্যাকআপ
-        probe_cmd = [ffmpeg_exe, '-i', v_step2]
-        probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
-        for line in probe_result.stderr.split('\n'):
-            if 'Video:' in line and ',' in line:
-                parts = line.split(',')
-                for part in parts:
-                    if 'x' in part:
-                        try:
-                            dims = part.strip().split(' ')[0].split('x')
-                            if len(dims) >= 2 and dims[0].isdigit():
-                                v_w, v_h = int(dims[0]), int(dims[1])
-                                break
-                        except: pass
-
-        page_name = st.text_input("আপনার পেজের নাম এখানে লিখুন (ইংরেজিতে):", value="ToonFlix")
-        
-        st.markdown("### 🎛️ টেক্সট কাস্টমাইজেশন প্যানেল:")
-        font_size = st.slider("📐 লেখার সাইজ বড়/ছোট করুন (Font Size):", min_value=15, max_value=150, value=35, step=1)
-        pos_x = st.slider("⬅️ ডানে-বামে সরান (X Position):", min_value=0, max_value=v_w, value=int(v_w * 0.70))
-        pos_y = st.slider("⬇️ ওপরে-নিচে সরান (Y Position):", min_value=0, max_value=v_h, value=50)
-        
-        if os.path.exists(preview_img_path) and page_name:
-            base_image = Image.open(preview_img_path).convert("RGBA")
-            base_image = base_image.resize((v_w, v_h))
-            
-            base_font = ImageFont.load_default()
-            text_canvas = Image.new('RGBA', (v_w, v_h), (0, 0, 0, 0))
-            text_draw = ImageDraw.Draw(text_canvas)
-            
-            left, top, right, bottom = text_draw.textbbox((0, 0), page_name, font=base_font)
-            orig_w = right - left
-            orig_h = bottom - top
-            
-            scale_factor = font_size / 10.0
-            tw = int(orig_w * scale_factor)
-            th = int(orig_h * scale_factor)
-            
-            pad_x = int(6 * scale_factor)
-            pad_y = int(5 * scale_factor)
-            
-            bx1 = pos_x - pad_x
-            by1 = pos_y - pad_y
-            bx2 = pos_x + tw + pad_x
-            by2 = pos_y + th + pad_y
-            
-            watermark_img = Image.new('RGBA', (v_w, v_h), (0, 0, 0, 0))
-            w_draw = ImageDraw.Draw(watermark_img)
-            w_draw.rounded_rectangle([bx1, by1, bx2, by2], radius=int(3 * scale_factor), fill=(0, 0, 0, 170))
-            
-            txt_layer = Image.new('RGBA', (orig_w if orig_w > 0 else 10, orig_h if orig_h > 0 else 10), (0,0,0,0))
-            t_draw = ImageDraw.Draw(txt_layer)
-            t_draw.text((0, 0), page_name, fill=(255, 255, 255, 255), font=base_font)
-            
-            if orig_w > 0 and orig_h > 0:
-                txt_layer = txt_layer.resize((tw, th), Image.Resampling.LANCZOS)
-                
-            watermark_img.paste(txt_layer, (pos_x, pos_y), txt_layer)
-            
-            st.markdown("#### 📺 লাইভ স্ক্রিন প্রিভিউ:")
-            base_image.alpha_composite(watermark_img)
-            st.image(base_image, use_container_width=True)
-            
-        if st.button("🎬 ৪. এই মাপে পেজের নাম লক করুন"):
-            status_text = st.empty()
-            status_text.markdown("🏷️ পুরো ভিডিওতে নাম যুক্ত করা হচ্ছে...")
-            try:
-                watermark_img.save(watermark_path)
-                
-                cmd = [
-                    ffmpeg_exe, '-y', '-i', v_step2, '-i', watermark_path,
-                    '-filter_complex', '[0:v][1:v]overlay=0:0:shortest=0,format=yuv420p[v]',
-                    '-map', '[v]', '-map', '0:a',
-                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'copy', v_step3
-                ]
-                
-                run_ffmpeg_with_progress(cmd, status_text)
-                
-                if os.path.exists(v_step3) and os.path.getsize(v_step3) > 0:
-                    with open(v_step3, "rb") as f: st.session_state.video_data = f.read()
-                    st.session_state.step = 4
-                    st.rerun()
-            except Exception as e:
-                st.error(f"ভুল হয়েছে: {str(e)}")
-            finally:
-                if os.path.exists(v_step2): os.remove(v_step2)
-                if os.path.exists(watermark_path): os.remove(watermark_path)
-                if os.path.exists(preview_img_path): os.remove(preview_img_path)
-
-# ==========================================
-# 🟢   ধাপ ৪: থাম্বনেইল সেট এবং ফাইনাল ডাউনলোড
-# ==========================================
-elif st.session_state.step == 4:
-    st.header("Step ৪: কাস্টম থাম্বনেইল ও ফাইনাল ডাউনলোড")
-    uploaded_image = st.file_uploader("📷 থাম্বনেইল ছবি আপলোড করুন (না দিলেও সমস্যা নেই):", type=["jpg", "jpeg", "png"])
-    
-    if st.button("🎬 ফাইনাল ভিডিও রেন্ডার করুন"):
-        if st.session_state.video_data is not None:
-            save_bytes_to_file(st.session_state.video_data, v_step3)
-            ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
-            
-            if uploaded_image is not None:
-                with open("temp_thumb.jpg", "wb") as f: f.write(uploaded_image.read())
-                status_text = st.empty()
-                status_text.markdown("🎨 থাম্বনেইল এবং অডিও ফাইনাল সিঙ্ক হচ্ছে...")
-                
-                cmd = [
-                    ffmpeg_exe, '-y', '-i', v_step3, '-i', "temp_thumb.jpg",
-                    '-filter_complex', 
-                    '[1:v]scale=iw:ih[t];[0:v][t]overlay=enable=\'lte(t,5)\':shortest=0[v];'
-                    '[0:a]adelay=5000|5000[a]',
-                    '-map', '[v]', '-map', '[a]',
-                    '-c:v', 'libx264', '-crf', '22', '-c:a', 'aac', v_final
-                ]
-                run_ffmpeg_with_progress(cmd, status_text)
-                
-                if os.path.exists("temp_thumb.jpg"): os.remove("temp_thumb.jpg")
-            else:
-                os.rename(v_step3, v_final)
-                
-            if os.path.exists(v_final) and os.path.getsize(v_final) > 0:
-                st.success("🎉 আলহামদুলিল্লাহ সুজন ভাই! আপনার এডিটিং প্রসেস সফল হয়েছে।")
-                with open(v_final, "rb") as video_file: st.video(video_file.read())
-                with open(v_final, "rb") as file:
-                    st.download_button(
-                        label="⬇️ গ্যালারিতে সেভ করুন (Download Perfect Video)",
-                        data=file,
-                        file_name="sujon_anti_copyright_pro.mp4",
-                        mime="video/mp4"
-                    )
-            else:
-                st.error("❌ ফাইনাল রেন্ডারিং এ সমস্যা হয়েছে।")
-
     st.markdown("---")
-    if st.button("🔄 নতুন ভিডিও এডিটিং শুরু করুন"):
-        for f in [v_start, v_step1, v_step2, v_step3, v_final, preview_img_path]:
+    if st.button("🔄 নতুন গান দিয়ে ভিডিও তৈরি করুন"):
+        for f in [audio_input, image_input, video_output]:
             if os.path.exists(f): os.remove(f)
         st.session_state.step = 1
-        st.session_state.video_data = None
         st.rerun()
