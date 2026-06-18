@@ -1,2 +1,5 @@
 streamlit
 imageio-ffmpeg
+librosa
+numpy
+soundfile
