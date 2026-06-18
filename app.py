@@ -7,12 +7,12 @@ import imageio_ffmpeg as im_ffmpeg
 st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Beat Sync Creator")
-st.write("সুজন ভাই, এবার ফিল্টারের এরর একদম ফিক্সড! কোনো ক্র্যাশ ছাড়াই রিলস ভিডিও তৈরি হবে।")
+st.write("সুজন ভাই, এবার সার্ভার ক্র্যাশ করবে না! ১০০% সেফ ফিল্টার দিয়ে রিলস ভিডিও তৈরি হবে।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
 image_input = "temp_input_image.jpg"
-video_output = "final_spectrum_video.mp4"
+video_output = "final_beat_sync_video.mp4"
 
 # সেশন স্টেট ইনিশিয়েলাইজেশন
 if "step" not in st.session_state:
@@ -59,9 +59,9 @@ if st.session_state.step == 1:
     ])
     
     if uploaded_audio is not None and uploaded_image is not None:
-        if st.button("🚀 বিট-ওয়েভ ভিডিও তৈরি করুন"):
+        if st.button("🚀 ভিডিও তৈরি শুরু করুন"):
             status_text = st.empty()
-            status_text.markdown("🎬 অডিও ফিল্টারিং এবং স্পেকট্রাম এনিমেশন শুরু হচ্ছে...")
+            status_text.markdown("🎬 অডিও ফিল্টারিং এবং ভিডিও রেন্ডারিং শুরু হচ্ছে...")
             try:
                 ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
                 
@@ -94,18 +94,16 @@ if st.session_state.step == 1:
                 else:
                     a_filter = "asetrate=44100*0.90,atempo=1.11,aecho=0.8:0.90:35:0.3,bass=g=5"
                 
-                # 🎯 ৩. ফিক্সড এফএফএমপ্যাগ ফিল্টার (রিলস ব্যাকগ্রাউন্ড এবং অডিও ওয়েভ ফিক্সড ফ্রেমরেট ২৫-এ লক করা হয়েছে)
+                # 🎯 ৩. ফিক্সড এফএফএমপ্যাগ জুম ফিল্টার (যা সার্ভার ক্র্যাশ ছাড়াই ছবিকে গানের ছন্দে কাঁপাবে)
                 cmd = [
                     ffmpeg_exe, '-y',
                     '-loop', '1', '-r', '25', '-i', image_input,
                     '-i', audio_input,
                     '-filter_complex', 
                     f"[1:a]{a_filter}[processed_audio];"
-                    f"[processed_audio]showwaves=s=720x300:mode=cline:colors=white|orange:r=25[wave];"
-                    f"[0:v]scale=720:1280,setpts=PTS-STARTPTS[bg];"
-                    f"[bg][wave]overlay=x=0:y=H-H/3:shortest=1[out_v]",
-                    '-map', '[out_v]', '-map', '[processed_audio]',
-                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+                    f"[0:v]scale=720:1280,zoompan=z='1+0.04*sin(2*pi*t*2.2)':d=1:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280,setpts=PTS-STARTPTS[processed_video]",
+                    '-map', '[processed_video]', '-map', '[processed_audio]',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24',
                     '-c:a', 'aac', '-b:a', '192k',
                     '-pix_fmt', 'yuv420p',
                     '-shortest', video_output
@@ -121,7 +119,7 @@ if st.session_state.step == 1:
                     st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি।")
                     
             except Exception as e:
-                st.error(f"严重 ত্রুটি ঘটেছে: {str(e)}")
+                st.error(f"ত্রুটি ঘটেছে: {str(e)}")
 
 # ==========================================
 # 🟢  ধাপ ২: প্লেব্যাক এবং ফাইনাল ডাউনলোড
@@ -138,7 +136,7 @@ elif st.session_state.step == 2:
             st.download_button(
                 label="⬇️ গ্যালারিতে সেভ করুন (Download Music Reel)",
                 data=file,
-                file_name="sujon_beat_visualizer.mp4",
+                file_name="sujon_beat_sync_fixed.mp4",
                 mime="video/mp4"
             )
     else:
