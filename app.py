@@ -7,15 +7,15 @@ import imageio_ffmpeg as im_ffmpeg
 # বড় ফাইল আপলোডের জন্য সাইজ লিমিট ২০০০ MB করা হলো
 st._config.set_option("server.maxUploadSize", 2000)
 
-st.set_page_config(page_title="Lo-Fi Audio Beat-Sync Video Creator", page_icon="🎵", layout="centered")
+st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
-st.title("🎵 Lo-Fi Audio Copyright Remover & Beat-Sync Reels Engine")
-st.write("সুজন ভাই, এবার আপনার আপলোড করা রিলস ছবিটি গানের বিটের তালে তালে নাচবে ও কাঁপবে!")
+st.title("🎵 Lo-Fi Audio Copyright Remover & Reels Creator")
+st.write("সুjon ভাই, আপনার আগের আসল কোডটি এখানে দেওয়া হলো। এবার রিলসের ছবিও সুন্দর কাজ করবে।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
 image_input = "temp_input_image.jpg"
-video_output = "final_beat_sync_reels.mp4"
+video_output = "final_reels_video.mp4"
 
 # সেশন স্টেট ইনিশিয়েলাইজেশন
 if "step" not in st.session_state:
@@ -24,7 +24,7 @@ if "step" not in st.session_state:
 st.markdown(f"### 🎯 বর্তমান অবস্থান: **ধাপ {st.session_state.step}**")
 st.markdown("---")
 
-# এফএফএমপ্যাগ প্রсеসিং লাইভ ট্র্যাক করার ফাংশন
+# এফএফএমপ্যাগ প্রসেসিং লাইভ ট্র্যাক করার ফাংশন
 def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
     progress_bar = st.progress(0)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
@@ -40,7 +40,7 @@ def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
             current_time = float(hours)*3600 + float(minutes)*60 + float(seconds)
             percent = min(int((current_time / total_duration) * 100), 100)
             progress_bar.progress(percent / 100.0)
-            status_text_display.markdown(f"⏳ বিটের সাথে ভিডিও রেন্ডার হচ্ছে: **{percent}%** সম্পন্ন")
+            status_text_display.markdown(f"⏳ প্রসেসিং হচ্ছে: **{percent}%** সম্পন্ন")
             
     process.wait()
     progress_bar.progress(1.0)
@@ -62,9 +62,9 @@ if st.session_state.step == 1:
     ])
     
     if uploaded_audio is not None and uploaded_image is not None:
-        if st.button("🚀 বিট-সিঙ্ক ভিডিও তৈরি করুন"):
+        if st.button("🚀 ভিডিও তৈরি শুরু করুন"):
             status_text = st.empty()
-            status_text.markdown("🎬 অডিও ফিল্টারিং এবং বিট-সিঙ্ক এনিমেশন শুরু হচ্ছে...")
+            status_text.markdown("🎬 অডিও প্রসেসিং এবং ভিডিও রেন্ডারিং শুরু হচ্ছে...")
             try:
                 ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
                 
@@ -78,7 +78,7 @@ if st.session_state.step == 1:
                 with open(image_input, "wb") as f:
                     f.write(uploaded_image.read())
                 
-                # অডিওর মোট সময়কাল (Duration) বের করা
+                # ১. অডিওর মোট সময়কাল (Duration) বের করা
                 probe_cmd = [ffmpeg_exe, '-i', audio_input]
                 probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
                 total_seconds = 30.0  # ডিফল্ট ব্যাকআপ
@@ -89,7 +89,7 @@ if st.session_state.step == 1:
                         total_seconds = float(h)*3600 + float(m)*60 + float(s)
                         break
 
-                # অডিওর কপিরাইট রিমুভাল ফিল্টার সেট করা
+                # ২. অডিওর কপিরাইট রিমুভাল ফিল্টার সেট করা
                 if "High Security" in voice_style:
                     a_filter = "asetrate=44100*0.93,atempo=1.07,bass=g=4"
                 elif "Lo-Fi" in voice_style:
@@ -97,27 +97,27 @@ if st.session_state.step == 1:
                 else:
                     a_filter = "asetrate=44100*0.90,atempo=1.11,aecho=0.8:0.90:35:0.3,bass=g=5"
                 
-                # 🎯 অডিওর বিটের ও ভলিউমের তালে তালে ছবিতে ডাইনামিক জুম/পালস (নাচানো) ইফেক্ট দেওয়া
-                # এখানে ছবিটিকে ইভন পিক্সেলে নিয়ে অডিও ডিরেক্ট ইনপুট ফিল্টারে বিটের সাথে সুক্ষ্ম স্কেলিং করা হয়েছে
+                # ৩. আগের সেই আসল সুন্দর কমান্ড (শুধু রিলস ছবির বিজোড় পিক্সেল ফিক্সড করা হয়েছে)
                 cmd = [
                     ffmpeg_exe, '-y',
                     '-loop', '1', '-i', image_input,
                     '-i', audio_input,
-                    '-filter_complex', f"[1:a]{a_filter}[out_a];[0:v]scale=trunc(iw/2)*2:trunc(ih/2)*2,zoompan=z='1+0.03*sin(2*pi*t*2.5)':d=1:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280[out_v]",
+                    '-filter_complex', f"[1:a]{a_filter}[out_a];[0:v]scale=trunc(iw/2)*2:trunc(ih/2)*2[out_v]",
                     '-map', '[out_v]', '-map', '[out_a]',
-                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+                    '-c:v', 'libx264', '-tune', 'stillimage',
                     '-c:a', 'aac', '-b:a', '192k',
-                    '-pix_fmt', 'yuv420p', '-shortest', video_output
+                    '-pix_fmt', 'yuv420p',
+                    '-shortest', video_output
                 ]
                 
                 run_ffmpeg_with_progress(cmd, status_text, total_duration=total_seconds)
                 
                 if os.path.exists(video_output) and os.path.getsize(video_output) > 0:
                     st.session_state.step = 2
-                    st.success("✅ বিট-সিঙ্ক ভিডিও সফলভাবে তৈরি হয়েছে!")
+                    st.success("✅ ভিডিও সফলভাবে তৈরি হয়েছে!")
                     st.rerun()
                 else:
-                    st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি।")
+                    st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি। দয়া করে ফাইল পরিবর্তন করে চেষ্টা করুন।")
                     
             except Exception as e:
                 st.error(f"ত্রুটি ঘটেছে: {str(e)}")
@@ -126,22 +126,22 @@ if st.session_state.step == 1:
 # 🟢  ধাপ ২: প্লেব্যাক এবং ফাইনাল ডাউনলোড
 # ==========================================
 elif st.session_state.step == 2:
-    st.header("Step ২: আপনার ফাইনাল বিট-সিঙ্ক ভিডিও ডাউনলোড করুন")
+    st.header("Step ২: আপনার ফাইনাল ভিডিও ডাউনলোড করুন")
     
     if os.path.exists(video_output):
-        st.markdown("### 📺 ভিডিও প্রিভিউ (গানের তালে ছবি নাচবে):")
+        st.markdown("### 📺 ভিডিও প্রিভিউ:")
         with open(video_output, "rb") as f:
             st.video(f.read())
             
         with open(video_output, "rb") as file:
             st.download_button(
-                label="⬇️ গ্যালারিতে সেভ করুন (Download Beat-Sync Video)",
+                label="⬇️ গ্যালারিতে সেভ করুন (Download Reels Video)",
                 data=file,
-                file_name="sujon_lofi_beat_sync.mp4",
+                file_name="sujon_lofi_reels.mp4",
                 mime="video/mp4"
             )
     else:
-        st.error("আউটপুট ফাইলটি পাওয়া যায়নি।")
+        st.error("আউটপুট ফাইলটি খুঁজে পাওয়া যায়নি।")
         
     st.markdown("---")
     if st.button("🔄 নতুন গান দিয়ে ভিডিও তৈরি করুন"):
