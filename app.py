@@ -7,7 +7,7 @@ import imageio_ffmpeg as im_ffmpeg
 st.set_page_config(page_title="Lo-Fi Video Maker", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Live Video Creator")
-st.write("সুজন ভাই, এবার ছবি স্মুথলি নড়াচড়া করবে এবং চমৎকার কালার ইফেক্টে ভিডিও জীবন্ত হয়ে উঠবে!")
+st.write("সুজন ভাই, এবার সব এরর ফিক্সড! ছবি স্মুথলি নড়াচড়া করবে এবং সুন্দর কালার ইফেক্ট তৈরি হবে।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
@@ -46,7 +46,7 @@ def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
 # 🟢  ধাপ ১: ফাইল আপলোড ও ইফেক্ট সিলেকশন
 # ==========================================
 if st.session_state.step == 1:
-    st.header("Step ১: অডিও এবং রিলস ছবি আপโหลด করুন")
+    st.header("Step ১: অডিও এবং রিলস ছবি আপলোড করুন")
     
     uploaded_audio = st.file_uploader("🎵 আপনার অডিও গানটি দিন (MP3/WAV)", type=["mp3", "wav"])
     uploaded_image = st.file_uploader("📷 রিলসের ব্যাকগ্রাউন্ড ছবি দিন (JPG/PNG)", type=["jpg", "jpeg", "png"])
@@ -95,7 +95,7 @@ if st.session_state.step == 1:
                 else:
                     a_filter = "atempo=1.03,aecho=0.8:0.85:25:0.2,treble=g=2"
                 
-                # ৩. ব্যবহারকারীর পছন্দ অনুযায়ী ওভারলে কালার ইফেক্ট সেট করা
+                # ৩. ওভারলে কালার ইফেক্ট
                 if "Cinematic" in video_effect:
                     color_filter = "eq=brightness=0.02:contrast=1.15:saturation=1.3"
                 elif "Neon" in video_effect:
@@ -103,15 +103,15 @@ if st.session_state.step == 1:
                 else:
                     color_filter = "eq=brightness=-0.02:contrast=1.05:saturation=0.9"
 
-                # 🎯 ৪. আসল ট্রিক: ছবিকে ২৫ এফপিএস-এ স্মুথ মোশনে নড়াচড়া করানো এবং কালার ওভারলে দেওয়া
-                # '1+0.05*sin(2*pi*t*0.1)' এর মাধ্যমে ছবি চমৎকারভাবে ধীরে ধীরে জুম-ইন ও আউট হয়ে জীবন্ত লাগবে
+                # 🎯 ৪. ফিক্সড মোশন ট্রিক: 'time' এর বদলে ফ্রেম সংখ্যা 'in' (Input Frame) ব্যবহার করা হয়েছে
+                # এর ফলে ছবিটা কোনো এরর ছাড়াই পানির ঢেউয়ের মতো স্মুথলি জুম-ইন ও আউট হবে
                 cmd = [
                     ffmpeg_exe, '-y',
                     '-loop', '1', '-r', '25', '-i', image_input,
                     '-i', audio_input,
                     '-filter_complex', 
                     f"[1:a]{a_filter}[processed_audio];"
-                    f"[0:v]scale=1280:2240,zoompan=z='1+0.05*sin(2*pi*time*0.1)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,{color_filter},setpts=PTS-STARTPTS[out_v]",
+                    f"[0:v]scale=1280:2240,zoompan=z='1+0.05*sin(in/40)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,{color_filter},setpts=PTS-STARTPTS[out_v]",
                     '-map', '[out_v]', '-map', '[processed_audio]',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
                     '-c:a', 'aac', '-b:a', '192k',
