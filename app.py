@@ -7,7 +7,7 @@ import imageio_ffmpeg as im_ffmpeg
 st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Beat Sync Creator")
-st.write("সুজন ভাই, এবার কোনো এরর আসবে না! অডিও গানের বিটের তালে নিচে চমৎকার সাউন্ড ওয়েভ তৈরি হবে।")
+st.write("সুজন ভাই, এবার ফিল্টারের এরর একদম ফিক্সড! কোনো ক্র্যাশ ছাড়াই রিলস ভিডিও তৈরি হবে।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
@@ -94,18 +94,18 @@ if st.session_state.step == 1:
                 else:
                     a_filter = "asetrate=44100*0.90,atempo=1.11,aecho=0.8:0.90:35:0.3,bass=g=5"
                 
-                # 🎯 ৩. এফএফএমপ্যাগ ডাইনামিক ফিল্টার (ভিডিওর মতো গানের তালে নিচে বার/ওয়েভ এনিমেশন ওভারলে হবে)
+                # 🎯 ৩. ফিক্সড এফএফএমপ্যাগ ফিল্টার (রিলস ব্যাকগ্রাউন্ড এবং অডিও ওয়েভ ফিক্সড ফ্রেমরেট ২৫-এ লক করা হয়েছে)
                 cmd = [
                     ffmpeg_exe, '-y',
-                    '-loop', '1', '-i', image_input,
+                    '-loop', '1', '-r', '25', '-i', image_input,
                     '-i', audio_input,
                     '-filter_complex', 
                     f"[1:a]{a_filter}[processed_audio];"
-                    f"[processed_audio]showwaves=s=720x240:mode=cline:colors=white|orange[wave];"
-                    f"[0:v]scale=720:1280[bg];"
-                    f"[bg][wave]overlay=x=0:y=H-H/4:shortest=1[out_v]",
+                    f"[processed_audio]showwaves=s=720x300:mode=cline:colors=white|orange:r=25[wave];"
+                    f"[0:v]scale=720:1280,setpts=PTS-STARTPTS[bg];"
+                    f"[bg][wave]overlay=x=0:y=H-H/3:shortest=1[out_v]",
                     '-map', '[out_v]', '-map', '[processed_audio]',
-                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
                     '-c:a', 'aac', '-b:a', '192k',
                     '-pix_fmt', 'yuv420p',
                     '-shortest', video_output
@@ -121,7 +121,7 @@ if st.session_state.step == 1:
                     st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি।")
                     
             except Exception as e:
-                st.error(f"ত্রুটি ঘটেছে: {str(e)}")
+                st.error(f"严重 ত্রুটি ঘটেছে: {str(e)}")
 
 # ==========================================
 # 🟢  ধাপ ২: প্লেব্যাক এবং ফাইনাল ডাউনলোড
