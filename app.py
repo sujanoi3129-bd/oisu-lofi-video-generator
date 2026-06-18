@@ -1,160 +1,135 @@
 import streamlit as st
 import subprocess
 import os
-import re
 import imageio_ffmpeg as im_ffmpeg
 
-st.set_page_config(page_title="Lo-Fi Video Maker", page_icon="🎵", layout="centered")
+# বড় ফাইল আপলোডের জন্য সাইজ লিমিট ২০০০ MB করা হলো
+st._config.set_option("server.maxUploadSize", 2000)
 
-st.title("🎵 Lo-Fi Audio Copyright Remover & Live Video Creator")
-st.write("সুজন ভাই, এবার সব এরর ফিক্সড! ছবি স্মুথলি নড়াচড়া করবে এবং সুন্দর কালার ইফেক্ট তৈরি হবে।")
+st.set_page_config(page_title="Lo-Fi Studio Pro", page_icon="🎧", layout="centered")
 
-# অস্থায়ী ফাইল পাথসমূহ
-audio_input = "temp_input_audio.mp3"
-image_input = "temp_input_image.jpg"
-video_output = "final_live_reel.mp4"
+st.title("🎧 Lo-Fi Studio Pro")
+st.write("ঝামেলাহীন ও ত্রুটিমুক্ত লফি ভিডিও এবং অডিও মেকার।")
 
-if "step" not in st.session_state:
-    st.session_state.step = 1
+# নতুন সহজ ২-ট্যাব সিস্টেম
+tab1, tab2 = st.tabs(["🖼️ গ্যালারি থেকে থাম্বনেইল", "🔊 শুধুমাত্র অডিও প্রসেস"])
 
-st.markdown(f"### 🎯 বর্তমান অবস্থান: **ধাপ {st.session_state.step}**")
+input_image_path = "temp_image.jpg"
+image_ready = False
+mode = None
+
+# ট্যাব ১: গ্যালারি থেকে আপলোড
+with tab1:
+    st.subheader("১. আপনার তৈরি করা সুন্দর থাম্বনেইলটি দিন")
+    uploaded_image = st.file_uploader("আপনার ডিভাইস থেকে ছবি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"], key="user_gallery_uploader")
+    if uploaded_image is not None:
+        with open(input_image_path, "wb") as f:
+            f.write(uploaded_image.read())
+        st.image(input_image_path, caption="✅ আপনার আপলোড করা ফাইনাল থাম্বনেইল", use_column_width=True)
+        image_ready = True
+        mode = "Upload"
+
+# ট্যাব ২: শুধুমাত্র অডিও মোড
+with tab2:
+    st.subheader("১. অডিও মোড সক্রিয়")
+    st.info("💡 এই মোডে কোনো ভিডিও তৈরি হবে না। আপনার গানটি চমৎকার লফি (Slowed + Reverb) অডিও হিসেবে তৈরি হবে।")
+    mode = "AudioOnly"
+
 st.markdown("---")
+st.subheader("২. অডিও ফাইল এবং ফাইনাল মেকিং")
+uploaded_audio = st.file_uploader("আপনার অডিও ফাইলটি আপলোড করুন (MP3/WAV)", type=["mp3", "wav"])
 
-# প্রসেসিং বার ট্র্যাক করার ফাংশন
-def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
-    progress_bar = st.progress(0)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-    time_regex = re.compile(r'time=(\d+):(\d+):(\d+\.\d+)')
+if uploaded_audio is not None:
+    input_audio_path = "temp_audio.mp3"
+    output_video_path = "final_lofi_master.mp4"
+    output_audio_path = "processed_lofi_audio.mp3"
     
-    while True:
-        line = process.stdout.readline()
-        if not line:
-            break
-        match = time_regex.search(line)
-        if match:
-            hours, minutes, seconds = match.groups()
-            current_time = float(hours)*3600 + float(minutes)*60 + float(seconds)
-            percent = min(int((current_time / total_duration) * 100), 100)
-            progress_bar.progress(percent / 100.0)
-            status_text_display.markdown(f"⏳ আপনার রিলস ভিডিওটি তৈরি হচ্ছে: **{percent}%** সম্পন্ন")
-            
-    process.wait()
-    progress_bar.progress(1.0)
-    progress_bar.empty()
-
-# ==========================================
-# 🟢  ধাপ ১: ফাইল আপলোড ও ইফেক্ট সিলেকশন
-# ==========================================
-if st.session_state.step == 1:
-    st.header("Step ১: অডিও এবং রিলস ছবি আপলোড করুন")
-    
-    uploaded_audio = st.file_uploader("🎵 আপনার অডিও গানটি দিন (MP3/WAV)", type=["mp3", "wav"])
-    uploaded_image = st.file_uploader("📷 রিলসের ব্যাকগ্রাউন্ড ছবি দিন (JPG/PNG)", type=["jpg", "jpeg", "png"])
-    
-    voice_style = st.selectbox("🎛️ কপিরাইট প্রটেকশন মোড:", [
-        "🎵 Creative Lo-Fi Vibe (হালকা ইকো + ২% স্পিড চেঞ্জ)",
-        "🔥 High Security Mode (পিচ ভারী + ৩% স্পিড পরিবর্তন)"
-    ])
-    
-    video_effect = st.selectbox("✨ ভিডিও লাইভ ওভারলে ইফেক্ট সিলেক্ট করুন:", [
-        "🌟 Cinematic Dream (উষ্ণ কালার টোন + ভাইব্রেন্ট লাইটিং)",
-        "🪐 Neon Cyber (হালকা গ্লো এবং শার্প কন্ট্রাস্ট ইফেক্ট)",
-        "🎬 Vintage Classic (পুরোনো মিউজিক ভিডিওর মতো মৃদু সফট লুক)"
-    ])
-    
-    if uploaded_audio is not None and uploaded_image is not None:
-        if st.button("🚀 চমৎকার রিলস ভিডিও তৈরি করুন"):
-            status_text = st.empty()
-            status_text.markdown("🎬 অডিও ফিল্টারিং এবং ভিডিও রেন্ডারিং শুরু হচ্ছে...")
-            try:
-                ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
-                
-                # আগের ক্যাশ পরিষ্কার করা
-                for f in [audio_input, image_input, video_output]:
-                    if os.path.exists(f): os.remove(f)
-                
-                with open(audio_input, "wb") as f:
-                    f.write(uploaded_audio.read())
-                with open(image_input, "wb") as f:
-                    f.write(uploaded_image.read())
-                
-                # ১. অডিওর মোট সময়কাল (Duration) বের করা
-                probe_cmd = [ffmpeg_exe, '-i', audio_input]
-                probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
-                total_seconds = 30.0
-                for line in probe_result.stderr.split('\n'):
-                    if 'Duration:' in line:
-                        time_str = line.split('Duration:')[1].split(',')[0].strip()
-                        h, m, s = time_str.split(':')
-                        total_seconds = float(h)*3600 + float(m)*60 + float(s)
-                        break
-
-                # ২. কপিরাইট অডিও ফিল্টার
-                if "High Security" in voice_style:
-                    a_filter = "asetrate=44100*0.93,atempo=1.07,bass=g=4"
-                else:
-                    a_filter = "atempo=1.03,aecho=0.8:0.85:25:0.2,treble=g=2"
-                
-                # ৩. ওভারলে কালার ইফেক্ট
-                if "Cinematic" in video_effect:
-                    color_filter = "eq=brightness=0.02:contrast=1.15:saturation=1.3"
-                elif "Neon" in video_effect:
-                    color_filter = "eq=contrast=1.25:saturation=1.4:gamma=0.95"
-                else:
-                    color_filter = "eq=brightness=-0.02:contrast=1.05:saturation=0.9"
-
-                # 🎯 ৪. ফিক্সড মোশন ট্রিক: 'time' এর বদলে ফ্রেম সংখ্যা 'in' (Input Frame) ব্যবহার করা হয়েছে
-                # এর ফলে ছবিটা কোনো এরর ছাড়াই পানির ঢেউয়ের মতো স্মুথলি জুম-ইন ও আউট হবে
-                cmd = [
-                    ffmpeg_exe, '-y',
-                    '-loop', '1', '-r', '25', '-i', image_input,
-                    '-i', audio_input,
-                    '-filter_complex', 
-                    f"[1:a]{a_filter}[processed_audio];"
-                    f"[0:v]scale=1280:2240,zoompan=z='1+0.05*sin(in/40)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,{color_filter},setpts=PTS-STARTPTS[out_v]",
-                    '-map', '[out_v]', '-map', '[processed_audio]',
-                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
-                    '-c:a', 'aac', '-b:a', '192k',
-                    '-pix_fmt', 'yuv420p',
-                    '-shortest', video_output
-                ]
-                
-                run_ffmpeg_with_progress(cmd, status_text, total_duration=total_seconds)
-                
-                if os.path.exists(video_output) and os.path.getsize(video_output) > 0:
-                    st.session_state.step = 2
-                    st.success("✅ আপনার জীবন্ত রিলস ভিডিও রেডি!")
-                    st.rerun()
-                else:
-                    st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি।")
-                    
-            except Exception as e:
-                st.error(f"ত্রুটি ঘটেছে: {str(e)}")
-
-# ==========================================
-# 🟢  ধাপ ২: প্লেব্যাক এবং ফাইনাল ডাউনলোড
-# ==========================================
-elif st.session_state.step == 2:
-    st.header("Step ২: আপনার ফাইনাল ভিডিও ডাউনলোড করুন")
-    
-    if os.path.exists(video_output):
-        st.markdown("### 📺 ভিডিও প্রিভিউ:")
-        with open(video_output, "rb") as f:
-            st.video(f.read())
-            
-        with open(video_output, "rb") as file:
-            st.download_button(
-                label="⬇️ গ্যালারিতে সেভ করুন (Download Music Reel)",
-                data=file,
-                file_name="sujon_live_reel.mp4",
-                mime="video/mp4"
-            )
-    else:
-        st.error("আউটপুট ফাইলটি খুঁজে পাওয়া যায়নি।")
+    with open(input_audio_path, "wb") as f:
+        f.write(uploaded_audio.read())
         
-    st.markdown("---")
-    if st.button("🔄 নতুন গান দিয়ে ভিডিও তৈরি করুন"):
-        for f in [audio_input, image_input, video_output]:
-            if os.path.exists(f): os.remove(f)
-        st.session_state.step = 1
-        st.rerun()
+    if st.button("🚀 প্রসেস শুরু করুন (Run Conversion)"):
+        ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
+        
+        # প্রিমিয়াম ইকো বেইজ বুস্ট এবং ১০% স্লো স্পিড লফি ফিল্টার
+        af_filter = "aecho=0.8:0.88:40:0.3,bass=g=6,atempo=0.90"
+        
+        # মোড অনুযায়ী কাজ করা
+        if mode == "AudioOnly":
+            with st.spinner("আপনার গানটিকে মিষ্টি লফি সাউন্ডে রূপান্তর করা হচ্ছে..."):
+                try:
+                    if os.path.exists(output_audio_path):
+                        os.remove(output_audio_path)
+                        
+                    command = [
+                        ffmpeg_exe, '-y',
+                        '-i', input_audio_path,
+                        '-af', af_filter,
+                        '-c:a', 'libmp3lame', '-b:a', '192k',
+                        output_audio_path
+                    ]
+                    
+                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    
+                    if os.path.exists(output_audio_path) and os.path.getsize(output_audio_path) > 0:
+                        st.success("🎉 আলহামদুলিল্লাহ ভাই! লফি অডিও ট্র্যাকটি সফলভাবে তৈরি হয়েছে।")
+                        st.audio(output_audio_path)
+                        with open(output_audio_path, "rb") as file:
+                            st.download_button(
+                                label="⬇️ লফি অডিও ডাউনলোড করুন (Download MP3)",
+                                data=file,
+                                file_name="lofi_slowed_reverb.mp3",
+                                mime="audio/mp3"
+                            )
+                    else:
+                        st.error("❌ অডিও প্রসেস করা যায়নি।")
+                except Exception as e:
+                    st.error(f"ভুল ত্রুটি: {str(e)}")
+                    
+        elif mode == "Upload":
+            if image_ready and os.path.exists(input_image_path):
+                with st.spinner("আপনার দেওয়া ছবি ও পানির মতো মোশন ইফেক্ট সহ ভিডিও তৈরি হচ্ছে..."):
+                    try:
+                        if os.path.exists(output_video_path):
+                            os.remove(output_video_path)
+                        
+                        # ১০০% সুরক্ষিত সিনেমাটিক মোশন ফিল্টার (কোনো ম্যাথ এরর আসবে না)
+                        cinematic_vf = (
+                            "scale=1320:742,setsar=1,"
+                            "zoompan=z='1.05':x='iw/2-(iw/zoom)/2+10*sin(on*0.05)':y='ih/2-(ih/zoom)/2+10*cos(on*0.05)':d=1:s=1280x720,"
+                            "vignette=angle=0.35,"
+                            "eq=contrast=1.06:saturation=1.05:brightness=0.01"
+                        )
+                        
+                        command = [
+                            ffmpeg_exe, '-y',
+                            '-loop', '1', '-i', input_image_path,
+                            '-i', input_audio_path,
+                            '-vf', cinematic_vf,
+                            '-af', af_filter,
+                            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+                            '-c:a', 'aac', '-shortest',
+                            output_video_path
+                        ]
+                        
+                        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        
+                        if os.path.exists(output_video_path) and os.path.getsize(output_video_path) > 0:
+                            st.success("🎉 আলহামদুলিল্লাহ ভাই! আপনার প্রিমিয়াম লফি ভিডিও সফলভাবে তৈরি হয়েছে।")
+                            st.video(output_video_path)
+                            with open(output_video_path, "rb") as file:
+                                st.download_button(
+                                    label="⬇️ গ্যালারিতে সেভ করুন (Download Video)",
+                                    data=file,
+                                    file_name="lofi_final_video.mp4",
+                                    mime="video/mp4"
+                               )
+                        else:
+                            st.error("❌ ভিডিও তৈরি করা যায়নি।")
+                            st.code(result.stderr)
+                    except Exception as e:
+                        st.error(f"ভুল ত্রুটি: {str(e)}")
+            else:
+                st.error("❌ ভাই, দয়া করে আগে ১ম ট্যাব থেকে আপনার তৈরি করা থাম্বনেইলটি আপলোড করে নিন।")
+                
+    # কাজ শেষে টেম্পোরারি ফাইল ডিলিট
+    if os.path.exists(input_audio_path): os.remove(input_audio_path)
