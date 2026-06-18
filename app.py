@@ -3,29 +3,26 @@ import subprocess
 import os
 import imageio_ffmpeg as im_ffmpeg
 
-# বড় ফাইল আপলোডের জন্য সাইজ লিমিট ২০০০ MB করা হলো
-st._config.set_option("server.maxUploadSize", 2000)
-
 st.set_page_config(page_title="Lo-Fi Studio Pro", page_icon="🎧", layout="centered")
 
 st.title("🎧 Lo-Fi Studio Pro")
 st.write("ঝামেলাহীন ও ত্রুটিমুক্ত লফি ভিডিও এবং অডিও মেকার।")
 
-# নতুন সহজ ২-ট্যাব সিস্টেম
-tab1, tab2 = st.tabs(["🖼️ গ্যালারি থেকে থাম্বনেইল", "🔊 শুধুমাত্র অডিও প্রসেস"])
+# সহজ ২-ট্যাব সিস্টেম (রিলস মোড এবং অডিও মোড)
+tab1, tab2 = st.tabs(["🖼️ রিলস ব্যাকগ্রাউন্ড ছবি", "🔊 শুধুমাত্র অডিও প্রসেস"])
 
 input_image_path = "temp_image.jpg"
 image_ready = False
 mode = None
 
-# ট্যাব ১: গ্যালারি থেকে আপলোড
+# ট্যাব ১: রিলস ছবি আপলোড
 with tab1:
-    st.subheader("১. আপনার তৈরি করা সুন্দর থাম্বনেইলটি দিন")
+    st.subheader("১. আপনার রিলসের জন্য লম্বা ব্যাকগ্রাউন্ড ছবিটি দিন")
     uploaded_image = st.file_uploader("আপনার ডিভাইস থেকে ছবি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"], key="user_gallery_uploader")
     if uploaded_image is not None:
         with open(input_image_path, "wb") as f:
             f.write(uploaded_image.read())
-        st.image(input_image_path, caption="✅ আপনার আপলোড করা ফাইনাল থাম্বনেইল", use_column_width=True)
+        st.image(input_image_path, caption="✅ আপনার আপলোড করা ফাইনাল রিলস ছবি", width=300)
         image_ready = True
         mode = "Upload"
 
@@ -87,22 +84,21 @@ if uploaded_audio is not None:
                     
         elif mode == "Upload":
             if image_ready and os.path.exists(input_image_path):
-                with st.spinner("আপনার দেওয়া ছবি ও পানির মতো মোশন ইফেক্ট সহ ভিডিও তৈরি হচ্ছে..."):
+                with st.spinner("আপনার দেওয়া ছবি ও পানির মতো লাইভ মোশন ইফেক্ট সহ ভিডিও তৈরি হচ্ছে..."):
                     try:
                         if os.path.exists(output_video_path):
                             os.remove(output_video_path)
                         
-                        # ১০০% সুরক্ষিত সিনেমাটিক মোশন ফিল্টার (কোনো ম্যাথ এরর আসবে না)
+                        # 🎯 রিলস সাইজ (৭২০x১২৮০) এবং পানির ঢেউয়ের মতো চমৎকার লাইভ মোশন ফিল্টার
                         cinematic_vf = (
-                            "scale=1320:742,setsar=1,"
-                            "zoompan=z='1.05':x='iw/2-(iw/zoom)/2+10*sin(on*0.05)':y='ih/2-(ih/zoom)/2+10*cos(on*0.05)':d=1:s=1280x720,"
-                            "vignette=angle=0.35,"
-                            "eq=contrast=1.06:saturation=1.05:brightness=0.01"
+                            "scale=1280:2240,"
+                            "zoompan=z='1+0.05*sin(in/40)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,"
+                            "eq=brightness=0.02:contrast=1.15:saturation=1.3"
                         )
                         
                         command = [
                             ffmpeg_exe, '-y',
-                            '-loop', '1', '-i', input_image_path,
+                            '-loop', '1', '-r', '25', '-i', input_image_path,
                             '-i', input_audio_path,
                             '-vf', cinematic_vf,
                             '-af', af_filter,
@@ -114,22 +110,22 @@ if uploaded_audio is not None:
                         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                         
                         if os.path.exists(output_video_path) and os.path.getsize(output_video_path) > 0:
-                            st.success("🎉 আলহামদুলিল্লাহ ভাই! আপনার প্রিমিয়াম লফি ভিডিও সফলভাবে তৈরি হয়েছে।")
+                            st.success("🎉 আলহামদুলিল্লাহ ভাই! আপনার প্রিমিয়াম লফি রিলস ভিডিও সফলভাবে তৈরি হয়েছে।")
                             st.video(output_video_path)
                             with open(output_video_path, "rb") as file:
                                 st.download_button(
                                     label="⬇️ গ্যালারিতে সেভ করুন (Download Video)",
                                     data=file,
-                                    file_name="lofi_final_video.mp4",
+                                    file_name="lofi_final_reel.mp4",
                                     mime="video/mp4"
                                )
                         else:
-                            st.error("❌ ভিডিও তৈরি করা যায়নি।")
+                            st.error("❌ ভিডিও তৈরি করা সম্ভব হয়নি। নিচে এরর কোড দেখুন:")
                             st.code(result.stderr)
                     except Exception as e:
                         st.error(f"ভুল ত্রুটি: {str(e)}")
             else:
-                st.error("❌ ভাই, দয়া করে আগে ১ম ট্যাব থেকে আপনার তৈরি করা থাম্বনেইলটি আপলোড করে নিন।")
+                st.error("❌ ভাই, দয়া করে আগে ১ম ট্যাব থেকে আপনার রিলসের ব্যাকগ্রাউন্ড ছবিটি আপলোড করে নিন।")
                 
     # কাজ শেষে টেম্পোরারি ফাইল ডিলিট
     if os.path.exists(input_audio_path): os.remove(input_audio_path)
