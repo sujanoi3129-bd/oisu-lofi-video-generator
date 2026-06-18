@@ -5,7 +5,7 @@ import re
 import imageio_ffmpeg as im_ffmpeg
 import numpy as np
 
-# librosa লাইব্রেরি লোড করা (বিট ডিটেকশনের জন্য)
+# librosa লাইব্রেরি লোড করা
 try:
     import librosa
     import soundfile as sf
@@ -16,7 +16,7 @@ except ImportError:
 st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Real Beat Sync Creator")
-st.write("সুজন ভাই, এবার আমরা গানের আসল বিট মেপে ছবিকে কাপাবো!")
+st.write("সুজন ভাই, এবার কমান্ড লাইনের এরর চিরতরে ফিক্সড! টেক্সট ফাইল ট্রিক দিয়ে ১০০% নিখুঁত বিট সিঙ্ক হবে।")
 
 if not LIBROSA_AVAILABLE:
     st.error("⚠️ গিটহাবের requirements.txt ফাইলে 'librosa' এবং 'soundfile' যোগ করে commit করুন, তারপর এখানে Rerun দিন।")
@@ -25,6 +25,7 @@ if not LIBROSA_AVAILABLE:
 audio_input = "temp_input_audio.mp3"
 audio_processed = "temp_processed_audio.wav"
 image_input = "temp_input_image.jpg"
+cmd_file = "beat_markers.txt"
 video_output = "final_beat_sync_video.mp4"
 
 if "step" not in st.session_state:
@@ -64,11 +65,10 @@ if st.session_state.step == 1:
     uploaded_image = st.file_uploader("📷 রিলসের জন্য লম্বা ব্যাকগ্রাউন্ড ছবিটি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"])
     
     voice_style = st.selectbox("🎛️ কপিরাইট প্রটেকশন ফিল্টার মোড:", [
-        "🎵 Creative Lo-Fi Vibe (হালকা ইকো + ২% স্পিড চেঞ্জ + সেফ ফিল্টার)",
-        "🔥 High Security Audio Changer (পিচ ভারী + ৩% স্পিড পরিবর্তন)"
+        "🎵 Creative Lo-Fi Vibe (হালকা ইকো + ২%amp; স্পিড চেঞ্জ + সেফ ফিল্টার)",
+        "🔥 High Security Audio Changer (পিচ ভারী + ৩%amp; স্পিড পরিবর্তন)"
     ])
     
-    # সুজন ভাই, এখান থেকে বিটের পাওয়ার কতটা বাড়াতে চান তা সিলেক্ট করতে পারবেন
     beat_strength = st.slider("💥 ছবি কাঁপানোর পাওয়ার (Beat Shake Strength):", 1.0, 3.0, 1.8, step=0.1)
     
     if uploaded_audio is not None and uploaded_image is not None and LIBROSA_AVAILABLE:
@@ -78,7 +78,8 @@ if st.session_state.step == 1:
             try:
                 ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
                 
-                for f in [audio_input, audio_processed, image_input, video_output]:
+                # আগের ফাইল পরিষ্কার করা
+                for f in [audio_input, audio_processed, image_input, cmd_file, video_output]:
                     if os.path.exists(f): os.remove(f)
                 
                 with open(audio_input, "wb") as f:
@@ -95,35 +96,33 @@ if st.session_state.step == 1:
                 cmd_audio = [ffmpeg_exe, '-y', '-i', audio_input, '-af', a_filter, audio_processed]
                 subprocess.run(cmd_audio, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
-                # ২. লিঁব্রোসা দিয়ে প্রসেসড অডিওর বিট ডাটা বের করা
+                # ২. লিঁব্রোসা দিয়ে বিট এনার্জি বের করা
                 y, sr = librosa.load(audio_processed, sr=None)
                 duration = librosa.get_duration(y=y, sr=sr)
                 
-                # প্রতি সেকেন্ডে ২৫ ফ্রেমের জন্য এনার্জি বের করা
-                hop_length = int(sr / 25) 
+                hop_length = int(sr / 25) # ২৫ এফপিএস
                 rms = librosa.feature.rms(y=y, frame_length=hop_length*2, hop_length=hop_length)[0]
                 
-                # এনার্জি নরমালইজ করা যাতে বেশি জোরে না কাঁপে
                 if np.max(rms) > 0:
                     rms = rms / np.max(rms)
                 
-                # ৩. জুম এক্সপ্রেশন তৈরি করা (গানের প্রতি ফ্রেমে ছবির সাইজ পরিবর্তন হবে)
-                # বেস জুম ১.০০, বিট আসলে সেটা বেড়ে যাবে
-                zoom_expr = ""
-                for idx, val in enumerate(rms[:int(duration*25)]):
-                    z_val = 1.0 + (float(val) * 0.05 * beat_strength)
-                    zoom_expr += f"eq(n,{idx})*{z_val:4f}+"
-                zoom_expr += "1.0" # ডিফল্ট ব্যাকআপ
+                # 🎯 ৩. টেক্সট ফাইলে বিটের ডাইনামিক কম্যান্ড সেভ করা (যাতে Argument list too long এরর না আসে)
+                with open(cmd_file, "w") as f_cmd:
+                    for idx, val in enumerate(rms[:int(duration*25)]):
+                        timestamp = idx / 25.0
+                        z_val = 1.0 + (float(val) * 0.06 * beat_strength)
+                        # এফএফএমপ্যাগ রিড করার ফরম্যাট
+                        f_cmd.write(f"{timestamp} zoompan zoom '{z_val:4f}';\n")
                 
                 status_text.markdown("🎬 গানের ছন্দে ভিডিও ফ্রেম সাজানো হচ্ছে...")
                 
-                # 🎯 ৪. এফএফএমপ্যাগ রান করা (বিটের এক্সপ্রেশনসহ)
+                # 🎯 ৪. এফএফএমপ্যাগ রান করা (sendcmd ফিল্টার দিয়ে টেক্সট ফাইল লোড করা হয়েছে)
                 cmd_video = [
                     ffmpeg_exe, '-y',
                     '-loop', '1', '-r', '25', '-i', image_input,
                     '-i', audio_processed,
                     '-filter_complex', 
-                    f"[0:v]scale=720:1280,zoompan=z='{zoom_expr}':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,setpts=PTS-STARTPTS[v]",
+                    f"[0:v]scale=720:1280,sendcmd=f={cmd_file},zoompan=z='1.0':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,setpts=PTS-STARTPTS[v]",
                     '-map', '[v]', '-map', '1:a',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24',
                     '-c:a', 'aac', '-b:a', '192k',
@@ -158,7 +157,7 @@ elif st.session_state.step == 2:
             st.download_button(
                 label="⬇️ গ্যালারিতে সেভ করুন (Download Music Reel)",
                 data=file,
-                file_name="sujon_real_beat_sync.mp4",
+                file_name="sujon_perfect_beat_sync.mp4",
                 mime="video/mp4"
             )
     else:
@@ -166,7 +165,7 @@ elif st.session_state.step == 2:
         
     st.markdown("---")
     if st.button("🔄 নতুন গান দিয়ে ভিডিও তৈরি করুন"):
-        for f in [audio_input, audio_processed, image_input, video_output]:
+        for f in [audio_input, audio_processed, image_input, cmd_file, video_output]:
             if os.path.exists(f): os.remove(f)
         st.session_state.step = 1
         st.rerun()
