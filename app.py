@@ -7,7 +7,7 @@ import imageio_ffmpeg as im_ffmpeg
 st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Beat Sync Creator")
-st.write("সুজন ভাই, এবার সার্ভার ক্র্যাশ করবে না! ১০০% সেফ ফিল্টার দিয়ে রিলস ভিডিও তৈরি হবে।")
+st.write("সুজন ভাই, এবার সব এরর ফিক্সড! কোনো ঝামেলা ছাড়াই আপনার রিলস ভিডিও তৈরি হবে ইনশাল্লাহ।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
@@ -94,14 +94,14 @@ if st.session_state.step == 1:
                 else:
                     a_filter = "asetrate=44100*0.90,atempo=1.11,aecho=0.8:0.90:35:0.3,bass=g=5"
                 
-                # 🎯 ৩. ফিক্সড এফএফএমপ্যাগ জুম ফিল্টার (যা সার্ভার ক্র্যাশ ছাড়াই ছবিকে গানের ছন্দে কাঁপাবে)
+                # 🎯 ৩. জুমপ্যান ফিল্টার আপডেট (পুরোনো ও নতুন সব FFmpeg ভার্সনের জন্য ফ্রেন্ডলি)
                 cmd = [
                     ffmpeg_exe, '-y',
                     '-loop', '1', '-r', '25', '-i', image_input,
                     '-i', audio_input,
                     '-filter_complex', 
                     f"[1:a]{a_filter}[processed_audio];"
-                    f"[0:v]scale=720:1280,zoompan=z='1+0.04*sin(2*pi*t*2.2)':d=1:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280,setpts=PTS-STARTPTS[processed_video]",
+                    f"[0:v]scale=720:1280,zoompan=z='1+0.03*sin(in/3)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=720x1280:fps=25,setpts=PTS-STARTPTS[processed_video]",
                     '-map', '[processed_video]', '-map', '[processed_audio]',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24',
                     '-c:a', 'aac', '-b:a', '192k',
@@ -136,7 +136,7 @@ elif st.session_state.step == 2:
             st.download_button(
                 label="⬇️ গ্যালারিতে সেভ করুন (Download Music Reel)",
                 data=file,
-                file_name="sujon_beat_sync_fixed.mp4",
+                file_name="sujon_reels_fixed.mp4",
                 mime="video/mp4"
             )
     else:
