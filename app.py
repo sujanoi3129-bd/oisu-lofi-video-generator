@@ -7,21 +7,36 @@ import imageio_ffmpeg as im_ffmpeg
 st.set_page_config(page_title="Lo-Fi Studio Pro", page_icon="🎧", layout="centered")
 
 st.title("🎧 Lo-Fi Studio Pro")
-st.write("ঝামেলাহীন ও ত্রুটিমুক্ত লফি ভিডিও এবং অডিও মেকার।")
-
-# সহজ ২-ট্যাব সিস্টেম
-tab1, tab2 = st.tabs(["🖼️ ছবি থেকে ভিডিও/রিলস", "🔊 শুধুমাত্র অডিও প্রসেс"])
+st.write("সুজন ভাই, এবার ট্যাব ঝামেলার অবসান! ভিডিও এবং রিলস ১০০% নিখুঁতভাবে তৈরি হবে।")
 
 input_image_path = "temp_image.jpg"
-image_ready = False
-mode = None
+input_audio_path = "temp_audio.mp3"
+output_video_path = "final_lofi_master.mp4"
+output_audio_path = "processed_lofi_audio.mp3"
 
-# 🟢 ট্যাব ১: ছবি আপলোড এবং সাইজ সিলেকশন
-with tab1:
-    st.subheader("১. আপনার ব্যাকগ্রাউন্ড ছবিটি আপলোড করুন")
-    uploaded_image = st.file_uploader("আপনার ডিভাইস থেকে ছবি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"], key="user_gallery_uploader")
+# ==========================================
+# 🟢 ধাপ ১: মেকিং মোড সিলেক্ট করুন (সহজ ও ফিক্সড ডিজাইন)
+# ==========================================
+st.subheader("১. আপনি কী তৈরি করতে চান?")
+making_mode = "ভিডিও বা রিলস তৈরি করব"  # ডিফল্ট ব্যাকআপ
+
+making_mode = st.radio(
+    "আপনার পছন্দটি বেছে নিন:",
+    ["🎬 ভিডিও বা রিলস তৈরি করব (ছবি ও গান সহ)", "🔊 শুধুমাত্র অডিও প্রসেস করব (কোনো ভিডিও হবে না)"],
+    index=0
+)
+
+# ==========================================
+# 🟢 ধাপ ২: ছবি ও সাইজ সিলেকশন (যদি ভিডিও মোড হয়)
+# ==========================================
+image_ready = False
+output_size_option = "📱 রিলস / শর্টস সাইজ (Reels 9:16 - 720x1280)"
+
+if "ভিডিও বা রিলস" in making_mode:
+    st.markdown("---")
+    st.subheader("২. আপনার ব্যাকগ্রাউন্ড ছবিটি আপলোড করুন")
+    uploaded_image = st.file_uploader("যেকোনো সাইজের ছবি আপলোড করুন (JPG/PNG)", type=["jpg", "jpeg", "png"])
     
-    # 🎯 সুজন ভাই, এখানে ভিডিওর সাইজ সিলেক্ট করার অপশন যোগ করা হলো
     output_size_option = st.selectbox("📐 আউটপুট ভিডিওর সাইজ সিলেক্ট করুন:", [
         "📱 রিলস / শর্টস সাইজ (Reels 9:16 - 720x1280)",
         "🎬 ফুল এইচডি ভিডিও সাইজ (Video 16:9 - 1280x720)"
@@ -30,22 +45,18 @@ with tab1:
     if uploaded_image is not None:
         with open(input_image_path, "wb") as f:
             f.write(uploaded_image.read())
-        st.image(input_image_path, caption="✅ আপনার আপলোড করা ছবি", width=300)
+        st.image(input_image_path, caption="✅ ছবি সফলভাবে আপলোড হয়েছে", width=250)
         image_ready = True
-        mode = "Upload"
 
-# 🟢 ট্যাব ২: শুধুমাত্র অডিও মোড
-with tab2:
-    st.subheader("১. অডিও মোড সক্রিয়")
-    st.info("💡 এই মোডে কোনো ভিডিও তৈরি হবে না। আপনার গানটি চমৎকার লফি (Slowed + Reverb) অডিও হিসেবে তৈরি হবে।")
-    mode = "AudioOnly"
-
+# ==========================================
+# 🟢 ধাপ ৩: অডিও ফাইল আপলোড
+# ==========================================
 st.markdown("---")
-st.subheader("২. অডিও ফাইল এবং ফাইনাল মেকিং")
-uploaded_audio = st.file_uploader("আপনার অডিও ফাইলটি আপলোড করুন (MP3/WAV)", type=["mp3", "wav"])
+st.subheader("৩. আপনার মূল অডিও গানটি আপলোড করুন")
+uploaded_audio = st.file_uploader("গান আপলোড করুন (MP3/WAV)", type=["mp3", "wav"])
 
 # এফএফএমপ্যাগ প্রসেসিং লাইভ ট্র্যাক করার ফাংশন (পারসেন্টেজ দেখানোর জন্য)
-def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0, msg="ভিডিওটি তৈরি হচ্ছে"):
+def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0, msg="প্রসেস হচ্ছে"):
     progress_bar = st.progress(0)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     time_regex = re.compile(r'time=(\d+):(\d+):(\d+\.\d+)')
@@ -66,39 +77,39 @@ def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0, msg=
     progress_bar.progress(1.0)
     progress_bar.empty()
 
+# ==========================================
+# 🟢 ধাপ ৪: কনভার্সন এবং ডাউনলোড
+# ==========================================
 if uploaded_audio is not None:
-    input_audio_path = "temp_audio.mp3"
-    output_video_path = "final_lofi_master.mp4"
-    output_audio_path = "processed_lofi_audio.mp3"
-    
-    with open(input_audio_path, "wb") as f:
-        f.write(uploaded_audio.read())
-        
-    if st.button("🚀 প্রসেস শুরু করুন (Run Conversion)"):
+    if st.button("🚀 লফি কনভার্সন শুরু করুন (Run Conversion)"):
         ffmpeg_exe = im_ffmpeg.get_ffmpeg_exe()
         
-        # প্রিমিয়াম ইকো বেইজ বুস্ট এবং ১০% স্লো স্পিড লফি ফিল্টার
-        af_filter = "aecho=0.8:0.88:40:0.3,bass=g=6,atempo=0.90"
-        
-        # অডিওর মোট সময়কাল (Duration) বের করা
+        # আগের পুরনো ফাইল পরিষ্কার করা
+        for f in [input_audio_path, output_video_path, output_audio_path]:
+            if os.path.exists(f): os.remove(f)
+            
+        with open(input_audio_path, "wb") as f:
+            f.write(uploaded_audio.read())
+            
+        # অডিওর মোট সময়কাল বের করা
         probe_cmd = [ffmpeg_exe, '-i', input_audio_path]
         probe_result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, text=True)
-        total_seconds = 30.0  # ব্যাকআপ ডিফল্ট
+        total_seconds = 30.0
         for line in probe_result.stderr.split('\n'):
             if 'Duration:' in line:
                 time_str = line.split('Duration:')[1].split(',')[0].strip()
                 h, m, s = time_str.split(':')
                 total_seconds = float(h)*3600 + float(m)*60 + float(s)
                 break
+                
+        # প্রিমিয়াম লফি ফিল্টার (Slowed + Reverb + Bass)
+        af_filter = "aecho=0.8:0.88:40:0.3,bass=g=6,atempo=0.90"
         
-        # 🟢 মোড ১: শুধুমাত্র অডিও প্রসেস
-        if mode == "AudioOnly":
+        # 💥 অপশন ১: শুধুমাত্র অডিও প্রসেস করা
+        if "শুধুমাত্র অডিও" in making_mode:
             status_text = st.empty()
-            status_text.markdown("🎧 আপনার গানটিকে মিষ্টি লফি সাউন্ডে রূপান্তর করা হচ্ছে...")
+            status_text.markdown("🎧 আপনার গানটিকে লফি সাউন্ডে রূপান্তর করা হচ্ছে...")
             try:
-                if os.path.exists(output_audio_path):
-                    os.remove(output_audio_path)
-                    
                 command = [
                     ffmpeg_exe, '-y',
                     '-i', input_audio_path,
@@ -106,7 +117,6 @@ if uploaded_audio is not None:
                     '-c:a', 'libmp3lame', '-b:a', '192k',
                     output_audio_path
                 ]
-                
                 run_ffmpeg_with_progress(command, status_text, total_duration=total_seconds, msg="লফি অডিও তৈরি হচ্ছে")
                 
                 if os.path.exists(output_audio_path) and os.path.getsize(output_audio_path) > 0:
@@ -123,17 +133,13 @@ if uploaded_audio is not None:
                     st.error("❌ অডিও প্রসেস করা যায়নি।")
             except Exception as e:
                 st.error(f"ভুল ত্রুটি: {str(e)}")
-                    
-        # 🟢 মোড ২: ছবি দিয়ে ভিডিও/রিলস মেকিং
-        elif mode == "Upload":
+                
+        # 💥 অপশন ২: ছবি সহ ভিডিও বা রিলস তৈরি করা
+        elif "ভিডিও বা রিলস" in making_mode:
             if image_ready and os.path.exists(input_image_path):
                 status_text = st.empty()
-                status_text.markdown("🎬 আপনার দেওয়া ছবি ও পানির মতো লাইভ মোশন ইফেক্ট সহ ভিডিও তৈরি হচ্ছে...")
+                status_text.markdown("🎬 আপনার দেওয়া ছবি ও চমৎকার লাইভ মোশন সহ ভিডিও তৈরি হচ্ছে...")
                 try:
-                    if os.path.exists(output_video_path):
-                        os.remove(output_video_path)
-                    
-                    # 📐 ইউজার যে অপশন সিলেক্ট করবে, সেই অনুযায়ী সাইজ এবং মোশন ফিল্টার সেট হবে
                     if "রিলস" in output_size_option:
                         # রিলস সাইজ ফিল্টার (৭২০x১২৮০)
                         cinematic_vf = (
@@ -143,14 +149,14 @@ if uploaded_audio is not None:
                         )
                         final_name = "lofi_final_reel.mp4"
                     else:
-                        # রেগুলার ভিডিও সাইজ ফিল্টার (১২৮০x৭২০)
+                        # ফুল এইচডি ভিডিও সাইজ ফিল্টার (১২৮০x৭২০)
                         cinematic_vf = (
                             "scale=2240:1280:force_original_aspect_ratio=increase,crop=2240:1280,"
                             "zoompan=z='1+0.05*sin(in/40)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1280x720:fps=25,"
                             "eq=brightness=0.02:contrast=1.15:saturation=1.3"
                         )
                         final_name = "lofi_final_video.mp4"
-                    
+                        
                     command = [
                         ffmpeg_exe, '-y',
                         '-loop', '1', '-r', '25', '-i', input_image_path,
@@ -161,11 +167,10 @@ if uploaded_audio is not None:
                         '-c:a', 'aac', '-shortest',
                         output_video_path
                     ]
-                    
-                    run_ffmpeg_with_progress(command, status_text, total_duration=total_seconds, msg="আপনার ভিডিওটি তৈরি হচ্ছে")
+                    run_ffmpeg_with_progress(command, status_text, total_duration=total_seconds, msg="আপনার লফি ভিডিওটি তৈরি হচ্ছে")
                     
                     if os.path.exists(output_video_path) and os.path.getsize(output_video_path) > 0:
-                        st.success("🎉 আলহামদুলিল্লাহ ভাই! আপনার প্রিমিয়াম ভিডিও সফলভাবে তৈরি হয়েছে।")
+                        st.success("🎉 আলহামদুলিল্লাহ ভাই! আপনার প্রিমিয়াম লফি ভিডিও সফলভাবে তৈরি হয়েছে।")
                         st.video(output_video_path)
                         with open(output_video_path, "rb") as file:
                             st.download_button(
@@ -179,7 +184,7 @@ if uploaded_audio is not None:
                 except Exception as e:
                     st.error(f"ভুল ত্রুটি: {str(e)}")
             else:
-                st.error("❌ ভাই, দয়া করে আগে ১ম ট্যাব থেকে আপনার ব্যাকগ্রাউন্ড ছবিটি আপলোড করে নিন।")
+                st.error("❌ ভাই, দয়া করে আগে উপর থেকে আপনার ব্যাকগ্রাউন্ড ছবিটি আপলোড করে নিন।")
                 
     # কাজ শেষে টেম্পোরারি অডিও ফাইল ডিলিট
     if os.path.exists(input_audio_path): os.remove(input_audio_path)
