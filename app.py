@@ -4,13 +4,10 @@ import os
 import re
 import imageio_ffmpeg as im_ffmpeg
 
-# বড় ফাইল আপলোডের জন্য সাইজ লিমিট ২০০০ MB করা হলো
-st._config.set_option("server.maxUploadSize", 2000)
-
 st.set_page_config(page_title="Lo-Fi Audio Copyright Remover", page_icon="🎵", layout="centered")
 
 st.title("🎵 Lo-Fi Audio Copyright Remover & Beat Sync Creator")
-st.write("সুজন ভাই, এবার আপনার দেওয়া ভিডিওর মতো অডিও গানের বিটের তালে নিচে চমৎকার সাউন্ড ওয়েভ তৈরি হবে!")
+st.write("সুজন ভাই, এবার কোনো এরর আসবে না! অডিও গানের বিটের তালে নিচে চমৎকার সাউন্ড ওয়েভ তৈরি হবে।")
 
 # অস্থায়ী ফাইল পাথসমূহ
 audio_input = "temp_input_audio.mp3"
@@ -24,7 +21,7 @@ if "step" not in st.session_state:
 st.markdown(f"### 🎯 বর্তমান অবস্থান: **ধাপ {st.session_state.step}**")
 st.markdown("---")
 
-# এফএফএমপ্যাগ প্রসেসিং লাইভ ট্র্যাক করার ফাংশન
+# এফএফএমপ্যাগ প্রসেসিং লাইভ ট্র্যাক করার ফাংশন
 def run_ffmpeg_with_progress(cmd, status_text_display, total_duration=10.0):
     progress_bar = st.progress(0)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
